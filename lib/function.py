@@ -102,7 +102,7 @@ def Fuzz(setting, payload):
 		url = url.replace('{fuzz}', payload)# On remplace {fuzz} par notre payload
 
 		t1 = time_now()# Récupération du temps actuel
-		reponse = requests.get(url, headers=headers)# Execution de la requête GET
+		reponse = requests.get(url, headers=headers, allow_redirects=False)# Execution de la requête GET
 		t2 = time_now()# Récupération du temps actuel
 
 		if delay !=0:# Si delay est différent de zero on fait patientez la page
@@ -162,7 +162,7 @@ def Fuzz(setting, payload):
 				postData[key] = postData[key].replace('{fuzz}', payload)# On remplace {fuzz} par notre payload
 
 				t1 = time_now()# Récupération du temps actuel
-				reponse = requests.post(url, data=postData, headers=headers)# Execution de la requête POST
+				reponse = requests.post(url, data=postData, headers=headers, allow_redirects=False)# Execution de la requête POST
 				t2 = time_now()# Récupération du temps actuel
 
 				if delay != 0:
