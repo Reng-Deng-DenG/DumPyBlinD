@@ -1,5 +1,7 @@
 from lib.dct import *
 from lib.msg import *
+from lib.getrows import *
+from lib.getdata import *
 from data.mysql import *
 from data.sqlite import *
 from prettytable import PrettyTable
